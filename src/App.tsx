@@ -7,6 +7,8 @@ import TrendingPage from './pages/TrendingPage';
 import CategoriesPage from './pages/CategoriesPage';
 import SearchPage from './pages/SearchPage';
 import MovieDetailPage from './pages/MovieDetailPage';
+import TVShowsPage from './pages/TVShowsPage';
+import TVDetailPage from './pages/TVDetailPage';
 
 export default function App() {
   return (
@@ -17,10 +19,12 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/movies" element={<MoviesPage />} />
+            <Route path="/tv" element={<TVShowsPage />} />
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/movie/:id" element={<MovieDetailPage />} />
+            <Route path="/tv/:id" element={<TVDetailPage />} />
           </Routes>
         </main>
         <Footer />
