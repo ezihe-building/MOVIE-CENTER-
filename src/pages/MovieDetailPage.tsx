@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Play, Star, Clock, Calendar, ArrowLeft, Globe, Users, X,
-  Film, Youtube, ExternalLink, Clapperboard
+  Film, Youtube, ExternalLink, Clapperboard, Tv
 } from 'lucide-react';
 import {
   getMovieDetails, getMovieVideos,
@@ -10,6 +10,7 @@ import {
   MovieDetails, Video, Cast, Movie,
 } from '../services/tmdb';
 import MovieRow from '../components/MovieRow';
+import StreamingPlatforms from '../components/StreamingPlatforms';
 import { DetailSkeleton } from '../components/LoadingSkeleton';
 
 export default function MovieDetailPage() {
@@ -315,6 +316,15 @@ export default function MovieDetailPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ─── Where to Watch ─── */}
+        <div className="mt-12 md:mt-16">
+          <div className="flex items-center gap-3 mb-6">
+            <Tv size={22} className="text-red-600" />
+            <h2 className="text-2xl font-bold text-white">Where to Watch</h2>
+          </div>
+          <StreamingPlatforms tmdbId={movie.id} type="movie" />
         </div>
 
         {/* ─── More Videos Section ─── */}
