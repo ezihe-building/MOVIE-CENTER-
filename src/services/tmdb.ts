@@ -132,3 +132,62 @@ export const getMoviesByGenre = async (genreId: number, page: number = 1): Promi
     sort_by: 'popularity.desc',
   });
 };
+
+// TV Shows
+export interface TVShow {
+  id: number; name: string; overview: string;
+  poster_path: string | null; backdrop_path: string | null;
+  first_air_date: string; vote_average: number; vote_count: number;
+  genre_ids: number[]; popularity: number; original_language: string; origin_country: string[];
+}
+
+export interface TVShowDetails {
+  id: number; name: string; overview: string;
+  poster_path: string | null; backdrop_path: string | null;
+  first_air_date: string; vote_average: number; vote_count: number;
+  popularity: number; original_language: string;
+  genres: { id: number; name: string }[];
+  tagline: string; status: string;
+  number_of_seasons: number; number_of_episodes: number;
+  seasons: { id: number; name: string; season_number: number; episode_count: number; air_date: string | null; poster_path: string | null; overview: string }[];
+  networks: { id: number; name: string; logo_path: string | null }[];
+  created_by: { id: number; name: string; profile_path: string | null }[];
+  episode_run_time: number[]; in_production: boolean;
+  last_air_date: string | null; type: string;
+}
+
+export interface SeasonDetails {
+  episodes: { id: number; name: string; episode_number: number; season_number: number; overview: string; still_path: string | null; air_date: string | null; vote_average: number; runtime: number | null }[];
+  name: string; overview: string; season_number: number; poster_path: string | null;
+}
+
+export interface TVResponse {
+  page: number; results: TVShow[]; total_pages: number; total_results: number;
+}
+
+export const getTrendingTV = async (timeWindow: 'day' | 'week' = 'week'): Promise<TVResponse> =>
+  fetchFromTMDB(`/trending/tv/${timeWindow}`);
+export const getPopularTV = async (page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/tv/popular', { page: String(page) });
+export const getTopRatedTV = async (page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/tv/top_rated', { page: String(page) });
+export const getAiringToday = async (page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/tv/airing_today', { page: String(page) });
+export const getOnTheAir = async (page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/tv/on_the_air', { page: String(page) });
+export const getTVShowDetails = async (id: number): Promise<TVShowDetails> =>
+  fetchFromTMDB(`/tv/${id}`);
+export const getTVSeasonDetails = async (id: number, seasonNumber: number): Promise<SeasonDetails> =>
+  fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`);
+export const getTVShowCredits = async (id: number): Promise<{ cast: Cast[] }> =>
+  fetchFromTMDB(`/tv/${id}/credits`);
+export const getTVShowVideos = async (id: number): Promise<{ results: Video[] }> =>
+  fetchFromTMDB(`/tv/${id}/videos`);
+export const getSimilarTVShows = async (id: number): Promise<TVResponse> =>
+  fetchFromTMDB(`/tv/${id}/similar`);
+export const searchTV = async (query: string, page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/search/tv', { query, page: String(page) });
+export const getTVGenres = async (): Promise<{ genres: Genre[] }> =>
+  fetchFromTMDB('/genre/tv/list');
+export const getTVShowsByGenre = async (genreId: number, page: number = 1): Promise<TVResponse> =>
+  fetchFromTMDB('/discover/tv', { with_genres: String(genreId), page: String(page), sort_by: 'popularity.desc' });
