@@ -1,4 +1,4 @@
-const API_KEY = import.meta.env.VITE_WATCHMODE_API_KEY as string;
+const API_KEY = (import.meta.env.VITE_WATCHMODE_API_KEY as string) || 'wawCZs1svKeZZCsVdAA42ykEis2MHjz2tiU9VNBv';
 const BASE_URL = 'https://api.watchmode.com/v1';
 
 export interface StreamingSource {
