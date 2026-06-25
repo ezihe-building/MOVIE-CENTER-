@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, Calendar, ArrowLeft, Globe, Users, Tv, Youtube, X, Play, Clapperboard } from 'lucide-react';
+import { Star, Calendar, ArrowLeft, Globe, Users, Tv, Youtube, X, Play, Clapperboard, ExternalLink } from 'lucide-react';
 import {
   getTVShowDetails, getTVShowVideos, getTVShowCredits, getSimilarTVShows, getTVSeasonDetails,
   getImageUrl, getBackdropUrl, TVShowDetails, SeasonDetails, Video, Cast, TVShow,
@@ -289,7 +289,7 @@ export default function TVDetailPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-red-500 text-xs font-bold">S{ep.season_number} · E{ep.episode_number}</span>
                         <span className="text-gray-500 text-xs">{ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
                         {ep.vote_average > 0 && (
@@ -297,6 +297,16 @@ export default function TVDetailPage() {
                             <Star size={10} fill="currentColor" />{ep.vote_average.toFixed(1)}
                           </span>
                         )}
+                        <span className="flex-1" />
+                        <a
+                          href={`https://www.themoviedb.org/tv/${show.id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[10px] bg-[#1a1a1a] hover:bg-[#222] text-gray-300 px-2 py-1 rounded-md border border-[#2a2a2a] transition-all duration-200"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <ExternalLink size={10} /> Watch via TMDB
+                        </a>
                       </div>
                       <p className="text-white text-sm font-semibold">{ep.name}</p>
                       <p className="text-gray-500 text-xs mt-1 line-clamp-2">{ep.overview || ''}</p>
