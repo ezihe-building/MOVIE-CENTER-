@@ -9,6 +9,7 @@ import SearchPage from './pages/SearchPage';
 import MovieDetailPage from './pages/MovieDetailPage';
 import TVShowsPage from './pages/TVShowsPage';
 import TVDetailPage from './pages/TVDetailPage';
+import LiveTVPage from './pages/LiveTVPage';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/movie/:id" element={<MovieDetailPage />} />
             <Route path="/tv/:id" element={<TVDetailPage />} />
+            <Route path="/live" element={<LiveTVPage />} />
           </Routes>
         </main>
         <Footer />
