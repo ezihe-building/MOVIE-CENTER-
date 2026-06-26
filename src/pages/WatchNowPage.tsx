@@ -1,100 +1,139 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Play, Search, Tv, Film, X, MonitorPlay, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Play, Search, Tv, Film, X, MonitorPlay, ExternalLink, RotateCw, AlertTriangle, RefreshCw } from 'lucide-react';
 
-interface EmbedSource {
-  name: string;
-  id: string;
-  type: 'movie' | 'tv';
-  tmdbId?: string;
-  embedUrl?: string;
-  externalUrl?: string;
+/* =========================================================
+   WATCH NOW — Embed any movie or TV show directly
+   Supports multiple streaming platforms
+   ========================================================= */
+
+interface SourceDef {
+  key: string;
+  label: string;
   description: string;
   color: string;
+  // builder: (tmdbId, type, season, episode) => embed URL
+  buildUrl: (tmdbId: string, type: 'movie' | 'tv', season?: number, episode?: number) => string;
+  // whether this source is known to redirect parent → avoid iframe
+  redirects?: boolean;
 }
 
-function buildEmbedUrl(source: string, tmdbId: string, type: 'movie' | 'tv', season?: number, episode?: number): string {
-  const s = String(tmdbId);
-  switch (source) {
-    case 'vidsrc':
-      if (type === 'tv' && season && episode) {
-        return `https://vidsrc.to/embed/tv/${s}/${season}/${episode}`;
-      }
-      return `https://vidsrc.to/embed/${type}/${s}`;
-    case 'moviestowatch':
-      return `https://moviestowatch.tv/${type === 'tv' ? 'tvshow' : 'movie'}/${s}`;
-    case 'superembed':
-      return `https://multiembed.mov/?video_id=${s}&tmdb=1`;
-    case 'autoembed':
-      return `https://autoembed.cc/${type}/${s}`;
-    default:
-      return '';
-  }
-}
-
-function buildExternalUrl(source: string, tmdbId: string, type: 'movie' | 'tv'): string {
-  const s = String(tmdbId);
-  switch (source) {
-    case 'moviestowatch':
-      return `https://moviestowatch.tv/${type === 'tv' ? 'tvshow' : 'movie'}/${s}`;
-    default:
-      return '';
-  }
-}
-
-const SOURCES: { key: string; label: string; description: string; color: string }[] = [
-  { key: 'vidsrc', label: 'VidSrc', description: 'HD streams, fast loading', color: '#E50914' },
-  { key: 'moviestowatch', label: 'MoviesToWatch', description: 'Large library, reliable', color: '#00A8E0' },
-  { key: 'superembed', label: 'SuperEmbed', description: 'Multi-source aggregator', color: '#9333ea' },
-  { key: 'autoembed', label: 'AutoEmbed', description: 'Auto-select best source', color: '#16a34a' },
+const SOURCES: SourceDef[] = [
+  {
+    key: 'vidsrc',
+    label: 'VidSrc',
+    description: 'Fast HD streams, reliable',
+    color: '#E50914',
+    buildUrl: (id, type, s, e) =>
+      type === 'tv' && s && e
+        ? `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
+        : `https://vidsrc.to/embed/${type}/${id}`,
+  },
+  {
+    key: 'embedsu',
+    label: 'EmbedSU',
+    description: 'Clean embed, minimal ads',
+    color: '#9333ea',
+    buildUrl: (id, type) => `https://embed.su/embed/${type}/${id}`,
+  },
+  {
+    key: 'moviestowatch',
+    label: 'MoviesToWatch',
+    description: 'Large library, modern UI',
+    color: '#00A8E0',
+    buildUrl: (id, type) =>
+      type === 'tv'
+        ? `https://moviestowatch.tv/tvshow/${id}`
+        : `https://moviestowatch.tv/movie/${id}`,
+    redirects: true,
+  },
+  {
+    key: '2embed',
+    label: '2Embed',
+    description: 'Multi-server, fast loads',
+    color: '#16a34a',
+    buildUrl: (id, type) =>
+      `https://www.2embed.cc/embed/${type === 'tv' ? 'tv' : 'movie'}/${id}`,
+  },
+  {
+    key: 'superembed',
+    label: 'SuperEmbed',
+    description: 'Auto picks best server',
+    color: '#f59e0b',
+    buildUrl: (id, type) =>
+      `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+  },
+  {
+    key: 'autoembed',
+    label: 'AutoEmbed',
+    description: 'Auto-select best source',
+    color: '#10b981',
+    buildUrl: (id, type) =>
+      `https://autoembed.cc/${type}/${id}`,
+  },
 ];
 
 export default function WatchNowPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tmdbId, setTmdbId] = useState(searchParams.get('id') || '');
-  const [type, setType] = useState<'movie' | 'tv'>((searchParams.get('type') as 'movie' | 'tv') || 'movie');
-  const [source, setSource] = useState('vidsrc');
+  const [type, setType] = useState<'movie' | 'tv'>(
+    (searchParams.get('type') as 'movie' | 'tv') || 'movie'
+  );
+  const [sourceKey, setSourceKey] = useState('vidsrc');
   const [season, setSeason] = useState(searchParams.get('s') || '1');
   const [episode, setEpisode] = useState(searchParams.get('e') || '1');
   const [embedUrl, setEmbedUrl] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<{tmdbId: string; type: string; title: string}[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [portraitMode, setPortraitMode] = useState(false);
+  const [recent, setRecent] = useState<{ tmdbId: string; type: string; title: string }[]>([]);
 
-  // Auto-load player when TMDB ID is passed via URL
+  const source = SOURCES.find((s) => s.key === sourceKey) || SOURCES[0];
+
+  // load recent
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('mc_recent_watch') || '[]');
-      setRecentSearches(saved.slice(0, 5));
+      setRecent(saved.slice(0, 5));
     } catch {}
   }, []);
 
+  // auto-load when URL has ?id=xxx
   useEffect(() => {
     const id = searchParams.get('id');
     if (id) {
       setTmdbId(id);
-      setType((searchParams.get('type') as 'movie' | 'tv') || 'movie');
-      if (searchParams.get('s')) setSeason(searchParams.get('s')!);
-      if (searchParams.get('e')) setEpisode(searchParams.get('e')!);
-      // Auto-play
+      const t = (searchParams.get('type') as 'movie' | 'tv') || 'movie';
+      setType(t);
+      const s = searchParams.get('s') || '1';
+      const e = searchParams.get('e') || '1';
+      setSeason(s);
+      setEpisode(e);
+      // small delay so React renders first
       setTimeout(() => {
-        const url = buildEmbedUrl(source, id, (searchParams.get('type') as 'movie' | 'tv') || 'movie', parseInt(searchParams.get('s') || '1'), parseInt(searchParams.get('e') || '1'));
+        const url = source.buildUrl(id, t, parseInt(s), parseInt(e));
         setEmbedUrl(url);
         setShowPlayer(true);
       }, 300);
     }
   }, [searchParams]);
 
+  const buildUrl = () => {
+    if (!tmdbId) return '';
+    return source.buildUrl(tmdbId, type, parseInt(season), parseInt(episode));
+  };
+
   const handleWatch = () => {
     if (!tmdbId) return;
+    setError(null);
     setLoading(true);
-    const url = buildEmbedUrl(source, tmdbId, type, parseInt(season), parseInt(episode));
+    const url = buildUrl();
     setEmbedUrl(url);
     setShowPlayer(true);
     setLoading(false);
-
-    // Save to recent
+    // save recent
     try {
       const saved = JSON.parse(localStorage.getItem('mc_recent_watch') || '[]');
       const filtered = saved.filter((r: any) => r.tmdbId !== tmdbId);
@@ -103,11 +142,21 @@ export default function WatchNowPage() {
     } catch {}
   };
 
+  const handleRetry = () => {
+    setError(null);
+    handleWatch();
+  };
+
   const handleRecentClick = (id: string, t: string) => {
     setTmdbId(id);
     setType(t as 'movie' | 'tv');
     setShowPlayer(false);
     setEmbedUrl('');
+    setError(null);
+  };
+
+  const togglePortrait = () => {
+    setPortraitMode(!portraitMode);
   };
 
   return (
@@ -115,7 +164,10 @@ export default function WatchNowPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="p-2.5 bg-[#111] border border-[#222] text-white rounded-full hover:bg-[#222] transition-all">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2.5 bg-[#111] border border-[#222] text-white rounded-full hover:bg-[#222] transition-all"
+          >
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -123,7 +175,7 @@ export default function WatchNowPage() {
               <MonitorPlay size={24} className="text-red-500" /> Watch Now
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Enter a TMDB ID to stream instantly
+              Stream any movie or TV show directly — 6 sources
             </p>
           </div>
         </div>
@@ -133,67 +185,97 @@ export default function WatchNowPage() {
           {/* Type toggle */}
           <div className="flex items-center gap-2 mb-4">
             <button
-              onClick={() => { setType('movie'); setShowPlayer(false); }}
+              onClick={() => {
+                setType('movie');
+                setShowPlayer(false);
+              }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                type === 'movie' ? 'bg-red-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]'
+                type === 'movie'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]'
               }`}
             >
               <Film size={14} /> Movie
             </button>
             <button
-              onClick={() => { setType('tv'); setShowPlayer(false); }}
+              onClick={() => {
+                setType('tv');
+                setShowPlayer(false);
+              }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                type === 'tv' ? 'bg-red-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]'
+                type === 'tv'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]'
               }`}
             >
               <Tv size={14} /> TV Show
             </button>
           </div>
 
-          {/* TMDB ID Input */}
+          {/* TMDB ID + Season/Episode */}
           <div className="flex flex-col md:flex-row gap-3 mb-4">
             <div className="flex-1">
-              <label className="text-gray-500 text-xs font-medium mb-1.5 block">TMDB ID</label>
+              <label className="text-gray-500 text-xs font-medium mb-1.5 block">
+                TMDB ID
+              </label>
               <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 focus-within:border-red-600/50 transition-all">
                 <Search size={16} className="text-gray-500" />
                 <input
                   type="text"
                   value={tmdbId}
-                  onChange={(e) => { setTmdbId(e.target.value); setShowPlayer(false); }}
-                  placeholder={`Enter TMDB ID (e.g., ${type === 'movie' ? '155' : '1399'})`}
+                  onChange={(e) => {
+                    setTmdbId(e.target.value);
+                    setShowPlayer(false);
+                    setError(null);
+                  }}
+                  placeholder={`e.g., ${type === 'movie' ? '155' : '1399'}`}
                   className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-gray-600"
                 />
                 {tmdbId && (
-                  <button onClick={() => { setTmdbId(''); setShowPlayer(false); }} className="text-gray-500 hover:text-white">
+                  <button
+                    onClick={() => {
+                      setTmdbId('');
+                      setShowPlayer(false);
+                    }}
+                    className="text-gray-500 hover:text-white"
+                  >
                     <X size={14} />
                   </button>
                 )}
               </div>
               <p className="text-gray-600 text-[10px] mt-1.5">
-                Find the TMDB ID on any movie page on your site → click the TMDB link
+                Find the TMDB ID on any movie page → click "View on TMDB"
               </p>
             </div>
-
-            {/* Season/Episode for TV */}
             {type === 'tv' && (
               <div className="flex gap-2">
                 <div className="w-20">
-                  <label className="text-gray-500 text-xs font-medium mb-1.5 block">Season</label>
+                  <label className="text-gray-500 text-xs font-medium mb-1.5 block">
+                    Season
+                  </label>
                   <input
                     type="number"
                     min="1"
                     value={season}
-                    onChange={(e) => { setSeason(e.target.value); setShowPlayer(false); }}
+                    onChange={(e) => {
+                      setSeason(e.target.value);
+                      setShowPlayer(false);
+                    }}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-3 text-white text-sm outline-none focus:border-red-600/50 text-center"
                   />
                 </div>
                 <div className="w-20">
-                  <label className="text-gray-500 text-xs font-medium mb-1.5 block">Episode</label>
+                  <label className="text-gray-500 text-xs font-medium mb-1.5 block">
+                    Episode
+                  </label>
                   <input
                     type="number"
                     min="1"
                     value={episode}
-                    onChange={(e) => { setEpisode(e.target.value); setShowPlayer(false); }}
+                    onChange={(e) => {
+                      setEpisode(e.target.value);
+                      setShowPlayer(false);
+                    }}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-3 text-white text-sm outline-none focus:border-red-600/50 text-center"
                   />
                 </div>
@@ -203,21 +285,36 @@ export default function WatchNowPage() {
 
           {/* Source Selector */}
           <div className="mb-4">
-            <label className="text-gray-500 text-xs font-medium mb-2 block">Stream Source</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <label className="text-gray-500 text-xs font-medium mb-2 block">
+              Stream Source
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {SOURCES.map((s) => (
                 <button
                   key={s.key}
-                  onClick={() => { setSource(s.key); setShowPlayer(false); }}
+                  onClick={() => {
+                    setSourceKey(s.key);
+                    setShowPlayer(false);
+                    setError(null);
+                  }}
                   className={`text-left p-3 rounded-xl border transition-all duration-300 ${
-                    source === s.key
+                    sourceKey === s.key
                       ? 'border-red-600 bg-red-600/10'
                       : 'border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#3a3a3a]'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-                    <span className={`text-xs font-bold ${source === s.key ? 'text-white' : 'text-gray-400'}`}>{s.label}</span>
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: s.color }}
+                    />
+                    <span
+                      className={`text-xs font-bold ${
+                        sourceKey === s.key ? 'text-white' : 'text-gray-400'
+                      }`}
+                    >
+                      {s.label}
+                    </span>
                   </div>
                   <p className="text-gray-600 text-[10px]">{s.description}</p>
                 </button>
@@ -242,39 +339,120 @@ export default function WatchNowPage() {
 
         {/* Player */}
         {showPlayer && embedUrl && (
-          <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden border border-[#1e1e1e] mb-6 shadow-2xl">
-            <iframe
-              src={embedUrl}
-              className="w-full h-full border-0"
-              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              allowFullScreen
-              title="Movie Player"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
-            />
-            {/* Source badge */}
-            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg">
-              <div className="w-2 h-2 rounded-full" style={{ background: SOURCES.find(s => s.key === source)?.color || '#fff' }} />
-              <span className="text-white text-[10px] font-bold">{SOURCES.find(s => s.key === source)?.label || 'Stream'}</span>
-            </div>
-            {/* External link */}
-            <a
-              href={buildExternalUrl(source, tmdbId, type) || embedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-3 right-3 z-10 p-2 bg-black/70 backdrop-blur-sm rounded-lg text-white hover:bg-black/90 transition-all"
-              title="Open in new tab"
+          <div className="mb-6">
+            {/* Player wrapper */}
+            <div
+              className={`relative bg-black rounded-2xl overflow-hidden border border-[#1e1e1e] shadow-2xl ${
+                portraitMode ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'
+              }`}
             >
-              <ExternalLink size={14} />
-            </a>
+              {/* Loading overlay */}
+              {loading && (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-2 border-white/20 border-t-red-500 rounded-full animate-spin" />
+                    <p className="text-white text-xs font-semibold">Loading player...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error overlay */}
+              {error && (
+                <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-20">
+                  <div className="text-center px-6">
+                    <AlertTriangle size={32} className="text-yellow-500 mx-auto mb-3" />
+                    <p className="text-white text-sm font-semibold mb-2">
+                      {error}
+                    </p>
+                    <p className="text-gray-500 text-xs mb-4">
+                      Try a different source or check the TMDB ID.
+                    </p>
+                    <div className="flex items-center gap-2 justify-center">
+                      <button
+                        onClick={handleRetry}
+                        className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all flex items-center gap-1"
+                      >
+                        <RefreshCw size={12} /> Retry
+                      </button>
+                      <a
+                        href={embedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-[#222] border border-[#333] text-white text-xs font-bold rounded-lg hover:bg-[#333] transition-all flex items-center gap-1"
+                      >
+                        <ExternalLink size={12} /> Open Directly
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Iframe */}
+              <iframe
+                src={embedUrl}
+                className="w-full h-full border-0"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture; display-capture"
+                allowFullScreen
+                title="Video Player"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerPolicy="no-referrer"
+                loading="eager"
+                onLoad={() => setLoading(false)}
+                onError={() => {
+                  setLoading(false);
+                  setError('Failed to load player. Try another source.');
+                }}
+              />
+
+              {/* Source badge */}
+              <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: source.color }}
+                />
+                <span className="text-white text-[10px] font-bold">
+                  {source.label}
+                </span>
+              </div>
+
+              {/* Controls */}
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                {/* Portrait toggle */}
+                <button
+                  onClick={togglePortrait}
+                  className="p-2 bg-black/70 backdrop-blur-sm rounded-lg text-white hover:bg-black/90 transition-all"
+                  title="Toggle Portrait Mode"
+                >
+                  <RotateCw size={14} />
+                </button>
+                {/* External link */}
+                <a
+                  href={embedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-black/70 backdrop-blur-sm rounded-lg text-white hover:bg-black/90 transition-all"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            </div>
+
+            {/* Source switch hint */}
+            <p className="text-gray-600 text-[10px] mt-2 text-center">
+              If the video doesn't load, try a different source above.
+            </p>
           </div>
         )}
 
         {/* Recent searches */}
-        {recentSearches.length > 0 && (
+        {recent.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Recent</h3>
+            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">
+              Recent
+            </h3>
             <div className="flex flex-wrap gap-2">
-              {recentSearches.map((r, i) => (
+              {recent.map((r, i) => (
                 <button
                   key={i}
                   onClick={() => handleRecentClick(r.tmdbId, r.type)}
@@ -293,27 +471,40 @@ export default function WatchNowPage() {
           <h3 className="text-white font-bold text-sm mb-3">How to Watch</h3>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">1</div>
+              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                1
+              </div>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Go to any <strong className="text-white">Movie</strong> or <strong className="text-white">TV Show</strong> page on this site
+                Go to any <strong className="text-white">Movie</strong> or{' '}
+                <strong className="text-white">TV Show</strong> page on this site
+                → click <strong className="text-white">Watch Now</strong>
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">2</div>
+              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                2
+              </div>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Click <strong className="text-white">"View on TMDB"</strong> to get the TMDB ID from the URL (e.g., <code className="text-red-400 bg-[#1a1a1a] px-1 rounded">tmdb.org/movie/155</code> → ID is <strong className="text-white">155</strong>)
+                Or enter a TMDB ID directly above, pick a source, and click{' '}
+                <strong className="text-white">Watch</strong>
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">3</div>
+              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                3
+              </div>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Paste the TMDB ID above, pick a source, and click <strong className="text-white">Watch</strong>
+                <strong className="text-white">Portrait mode</strong> — tap the
+                rotate icon to switch to vertical on your phone
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">4</div>
+              <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                4
+              </div>
               <p className="text-gray-400 text-xs leading-relaxed">
-                For TV shows, enter the season and episode number, then click Watch
+                <strong className="text-white">Not loading?</strong> Try a different
+                source — each platform has different servers
               </p>
             </div>
           </div>
@@ -322,10 +513,11 @@ export default function WatchNowPage() {
         {/* Disclaimer */}
         <div className="bg-[#111] border border-[#222] rounded-2xl p-5">
           <p className="text-gray-600 text-xs leading-relaxed">
-            <strong className="text-gray-500">Third-party streaming:</strong> The player embeds content from external video hosting services.
-            Ezihe Movie Center does not host, upload, or distribute any video content.
-            All streams are provided by third-party sources. The user is responsible for complying with local laws and copyright regulations.
-            This is a search and discovery interface only.
+            <strong className="text-gray-500">Third-party streaming:</strong> The player
+            embeds content from external video hosting services. Ezihe Movie Center does
+            not host, upload, or distribute any video content. All streams are provided
+            by third-party sources. The user is responsible for complying with local laws
+            and copyright regulations.
           </p>
         </div>
       </div>
