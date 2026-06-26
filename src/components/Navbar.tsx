@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Film, Home, TrendingUp, Grid3X3, Clapperboard, Tv, Radio } from 'lucide-react';
+import { Search, Menu, X, Film, Home, TrendingUp, Grid3X3, Clapperboard, Tv, Radio, Play } from 'lucide-react';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -35,6 +35,7 @@ export default function Navbar() {
     { to: '/movies', label: 'Movies', icon: <Clapperboard size={18} /> },
     { to: '/tv', label: 'TV Series', icon: <Tv size={18} /> },
     { to: '/live', label: 'Live TV', icon: <Radio size={18} /> },
+    { to: '/stream', label: 'Stream Hub', icon: <Play size={18} /> },
     { to: '/trending', label: 'Trending', icon: <TrendingUp size={18} /> },
     { to: '/categories', label: 'Categories', icon: <Grid3X3 size={18} /> },
   ];
