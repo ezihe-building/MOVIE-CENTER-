@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Radio, AlertTriangle, Play, Pause, Volume2, VolumeX, Maximize, RotateCw, Cast } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Radio, AlertTriangle, Play, Pause, Volume2, VolumeX, Maximize, RotateCw, Loader2, Cast, Grid3X3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Channel {
@@ -7,7 +7,7 @@ interface Channel {
   name: string;
   category: string;
   logo?: string;
-  hlsUrl?: string;
+  hlsUrl: string;
 }
 
 const CHANNELS: Channel[] = [
@@ -31,7 +31,7 @@ const CHANNELS: Channel[] = [
 ];
 
 const CATEGORIES = ['All', ...Array.from(new Set(CHANNELS.map(c => c.category)))];
-const PALETTE = ['#1D6CF5', '#e11d48', '#9333ea', '#0891b2', '#ea580c', '#16a34a'];
+const PALETTE = ['#E50914', '#e11d48', '#9333ea', '#0891b2', '#ea580c', '#16a34a', '#1D6CF5', '#f59e0b'];
 
 function getColor(name: string) {
   const hash = [...name].reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0);
@@ -41,7 +41,6 @@ function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-// HLS.js CDN loader
 let hlsScriptLoaded = false;
 function loadHlsScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -59,45 +58,37 @@ export default function LiveTVPage() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
-  const [active, setActive] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [filter, setFilter] = useState('All');
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [portraitMode, setPortraitMode] = useState(false);
-  const [playerVisible, setPlayerVisible] = useState(true);
+  const [mode, setMode] = useState<'cinexora' | 'direct'>('cinexora');
 
-  const ch = CHANNELS[active];
+  const ch = CHANNELS[activeIndex];
   const filtered = CHANNELS.map((c, i) => ({ c, i })).filter(x => filter === 'All' || x.c.category === filter);
   const displayed = showAll ? filtered : filtered.slice(0, 10);
 
-  // Load channel stream
-  const loadChannel = async (channel: Channel, index: number) => {
-    setActive(index);
+  const playChannel = useCallback(async (channel: Channel, index: number) => {
+    setActiveIndex(index);
     setLoading(true);
     setError(null);
     setPlaying(false);
-
-    if (!channel.hlsUrl) {
-      setError('No stream URL available for this channel');
-      setLoading(false);
-      return;
-    }
+    setMode('direct');
 
     const video = videoRef.current;
     if (!video) { setLoading(false); return; }
 
-    // Destroy previous HLS instance
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    // Destroy previous HLS
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    video.src = '';
+    video.load();
 
     try {
-      // Check if browser supports HLS natively (Safari/iOS)
+      // Safari / iOS native HLS support
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = channel.hlsUrl;
         video.load();
@@ -105,7 +96,7 @@ export default function LiveTVPage() {
         setPlaying(true);
         setLoading(false);
       } else {
-        // Use HLS.js
+        // HLS.js for Chrome/Firefox
         await loadHlsScript();
         const Hls = (window as any).Hls;
         if (Hls && Hls.isSupported()) {
@@ -114,6 +105,7 @@ export default function LiveTVPage() {
             maxMaxBufferLength: 60,
             enableWorker: true,
             lowLatencyMode: false,
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
           });
           hlsRef.current = hls;
           hls.loadSource(channel.hlsUrl);
@@ -123,8 +115,7 @@ export default function LiveTVPage() {
               setPlaying(true);
               setLoading(false);
             }).catch(() => {
-              setLoading(false);
-              // Autoplay blocked - user can click play
+              setLoading(false); // Autoplay blocked
             });
           });
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
@@ -132,6 +123,7 @@ export default function LiveTVPage() {
               setError(`Stream error: ${data.type}. Try another channel.`);
               setLoading(false);
               hls.destroy();
+              hlsRef.current = null;
             }
           });
         } else {
@@ -140,28 +132,16 @@ export default function LiveTVPage() {
         }
       }
     } catch (err) {
-      setError('Failed to load stream. Channel may be offline.');
+      setError('Failed to load stream. This channel may be temporarily offline.');
       setLoading(false);
     }
-  };
-
-  // Auto-load first channel on mount
-  useEffect(() => {
-    loadChannel(CHANNELS[0], 0);
-    // Cleanup
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
   }, []);
 
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
-      video.play().then(() => setPlaying(true));
+      video.play().then(() => setPlaying(true)).catch(() => {});
     } else {
       video.pause();
       setPlaying(false);
@@ -185,10 +165,6 @@ export default function LiveTVPage() {
     }
   };
 
-  const togglePortrait = () => {
-    setPortraitMode(!portraitMode);
-  };
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-20 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -208,75 +184,103 @@ export default function LiveTVPage() {
           </span>
         </div>
 
-        {/* Video Player */}
+        {/* Player toggle */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setMode('cinexora')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              mode === 'cinexora' ? 'bg-[#1D6CF5] text-white' : 'bg-[#111] border border-[#222] text-gray-400'
+            }`}
+          >
+            <Cast size={12} /> CINEXORA Player
+          </button>
+          <button
+            onClick={() => { setMode('direct'); playChannel(ch, activeIndex); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              mode === 'direct' ? 'bg-[#E50914] text-white' : 'bg-[#111] border border-[#222] text-gray-400'
+            }`}
+          >
+            <Play size={12} /> Direct Stream
+          </button>
+          <span className="text-gray-600 text-[10px] ml-1">Tap a channel below to switch</span>
+        </div>
+
+        {/* Player */}
         <div className={`relative bg-black rounded-2xl overflow-hidden border border-[#1e1e1e] ${portraitMode ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'}`}>
-          <video
-            ref={videoRef}
-            className="w-full h-full"
-            playsInline
-            muted={muted}
-            onClick={togglePlay}
-            poster={ch.logo}
-          />
-
-          {/* Loading spinner */}
-          {loading && (
-            <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 border-2 border-white/20 border-t-red-500 rounded-full animate-spin" />
-                <p className="text-white text-xs font-semibold">Loading {ch.name}...</p>
+          {mode === 'cinexora' ? (
+            <>
+              <iframe
+                src="https://cinexora.emmyhenztech.site/livetv.html"
+                className="w-full h-full border-0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                title="CINEXORA Live TV"
+                loading="eager"
+              />
+              {/* CINEXORA credit */}
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
+                <span className="text-[10px] text-gray-500">Powered by</span>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
               </div>
-            </div>
-          )}
-
-          {/* Error overlay */}
-          {error && (
-            <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-10">
-              <div className="text-center px-6">
-                <AlertTriangle size={32} className="text-yellow-500 mx-auto mb-3" />
-                <p className="text-white text-sm font-semibold mb-2">{error}</p>
-                <p className="text-gray-500 text-xs mb-4">This channel may be temporarily offline. Try another one.</p>
-                <button onClick={() => loadChannel(ch, active)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all">
-                  Retry
+            </>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                className="w-full h-full"
+                playsInline
+                muted={muted}
+                onClick={togglePlay}
+                poster={ch.logo}
+              />
+              {/* Loading */}
+              {loading && (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-2 border-white/20 border-t-red-500 rounded-full animate-spin" />
+                    <p className="text-white text-xs font-semibold">Loading {ch.name}...</p>
+                  </div>
+                </div>
+              )}
+              {/* Error */}
+              {error && (
+                <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-10">
+                  <div className="text-center px-6">
+                    <AlertTriangle size={32} className="text-yellow-500 mx-auto mb-3" />
+                    <p className="text-white text-sm font-semibold mb-2">{error}</p>
+                    <button onClick={() => playChannel(ch, activeIndex)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all">
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Controls */}
+              <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                <button onClick={togglePlay} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                  {playing ? <Pause size={16} /> : <Play size={16} fill="white" />}
                 </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{ch.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={toggleMute} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                    {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
+                  <button onClick={() => setPortraitMode(!portraitMode)} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all" title="Toggle Portrait">
+                    <RotateCw size={16} />
+                  </button>
+                  <button onClick={toggleFullscreen} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                    <Maximize size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
+              {/* CINEXORA credit */}
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
+                <span className="text-[10px] text-gray-500">Powered by</span>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
+              </div>
+            </>
           )}
-
-          {/* Controls overlay */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-            {/* Play/Pause */}
-            <button onClick={togglePlay} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
-              {playing ? <Pause size={16} /> : <Play size={16} fill="white" />}
-            </button>
-
-            {/* Center info */}
-            <div className="flex items-center gap-2">
-              <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{ch.name}</span>
-            </div>
-
-            {/* Right controls */}
-            <div className="flex items-center gap-2">
-              {/* Volume */}
-              <button onClick={toggleMute} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
-                {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
-              {/* Portrait toggle */}
-              <button onClick={togglePortrait} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all" title="Toggle Portrait">
-                <RotateCw size={16} />
-              </button>
-              {/* Fullscreen */}
-              <button onClick={toggleFullscreen} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
-                <Maximize size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* CINEXORA credit */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
-            <span className="text-[10px] text-gray-500">Powered by</span>
-            <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold transition-colors">CINEXORA</a>
-          </div>
         </div>
 
         {/* Disclaimer */}
@@ -284,8 +288,8 @@ export default function LiveTVPage() {
           <AlertTriangle size={14} className="text-yellow-500 mt-0.5 flex-shrink-0" />
           <p className="text-gray-400 text-xs leading-relaxed">
             Live TV streams are provided by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors">CINEXORA</a>.
-            Channel availability depends on upstream sources. All streams are free-to-air.
-            <span className="text-yellow-500 font-semibold"> Tap a channel below to switch.</span>
+            Channel availability depends on upstream sources.
+            {mode === 'cinexora' ? ' Use the CINEXORA player above to select channels.' : ' Tap a channel below to switch.'}
           </p>
         </div>
 
@@ -294,7 +298,7 @@ export default function LiveTVPage() {
           {CATEGORIES.map(cat => (
             <button
               key={cat}
-              onClick={() => { setFilter(cat); setActive(0); setShowAll(false); }}
+              onClick={() => { setFilter(cat); setActiveIndex(0); setShowAll(false); }}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
                 filter === cat ? 'bg-[#1D6CF5] text-white' : 'bg-[#111] border border-[#222] text-gray-400 hover:text-white'
               }`}
@@ -309,9 +313,9 @@ export default function LiveTVPage() {
           {displayed.map(({ c, i }) => (
             <button
               key={c.id}
-              onClick={() => loadChannel(c, i)}
+              onClick={() => playChannel(c, i)}
               className={`group text-left rounded-xl overflow-hidden border transition-all duration-200 ${
-                active === i ? 'border-[#1D6CF5] ring-1 ring-[#1D6CF5]' : 'border-[#1e1e1e] hover:border-[#333]'
+                activeIndex === i ? 'border-[#E50914] ring-1 ring-[#E50914]' : 'border-[#1e1e1e] hover:border-[#333]'
               }`}
             >
               <div className="relative aspect-[16/10] flex items-center justify-center overflow-hidden" style={{ background: c.logo ? '#000' : getColor(c.name) }}>
@@ -320,9 +324,7 @@ export default function LiveTVPage() {
                 ) : (
                   <span className="text-white font-black text-lg">{getInitials(c.name)}</span>
                 )}
-                {/* LIVE dot */}
                 <span className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#e11d48] shadow-[0_0_8px_#e11d48] animate-pulse" />
-                {/* Play overlay on hover */}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                     <Play size={16} fill="white" className="text-white" />
