@@ -418,7 +418,6 @@ export default function WatchNowPage() {
                   allow="autoplay; fullscreen; encrypted-media; picture-in-picture; display-capture"
                   allowFullScreen
                   title="Video Player"
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
                   referrerPolicy="no-referrer"
                   loading="eager"
                   onLoad={() => setLoading(false)}
