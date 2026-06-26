@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Play, Star, Clock, Calendar, ArrowLeft, Globe, Users, X,
   Film, Youtube, ExternalLink, Clapperboard, Tv
@@ -215,6 +215,14 @@ export default function MovieDetailPage() {
                   No Trailer Available
                 </div>
               )}
+
+              <Link
+                to={`/watch?id=${movie.id}&type=movie`}
+                className="flex items-center gap-2 px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg shadow-red-600/30 text-sm md:text-base"
+              >
+                <Play size={20} fill="currentColor" />
+                Watch Now
+              </Link>
 
               {movie.imdb_id && (
                 <a
