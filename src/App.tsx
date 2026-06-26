@@ -12,6 +12,7 @@ import TVDetailPage from './pages/TVDetailPage';
 import LiveTVPage from './pages/LiveTVPage';
 import StreamingHubPage from './pages/StreamingHubPage';
 import FreeMoviesPage from './pages/FreeMoviesPage';
+import WatchNowPage from './pages/WatchNowPage';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/live" element={<LiveTVPage />} />
             <Route path="/stream" element={<StreamingHubPage />} />
             <Route path="/free-movies" element={<FreeMoviesPage />} />
+            <Route path="/watch" element={<WatchNowPage />} />
           </Routes>
         </main>
         <Footer />
