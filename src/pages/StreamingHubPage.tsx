@@ -118,6 +118,30 @@ export default function StreamingHubPage() {
           </div>
         </div>
 
+        {/* Free Movies Promo Banner */}
+        <Link to="/free-movies">
+          <div className="relative rounded-2xl overflow-hidden mb-6 bg-gradient-to-r from-[#1a2e1a] via-[#132e13] to-[#0f3d0f] p-5 md:p-6 group hover:shadow-xl hover:shadow-green-900/20 transition-all duration-500 cursor-pointer border border-[#1e1e1e] hover:border-green-600/30">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-green-600/10 rounded-full blur-3xl group-hover:bg-green-600/20 transition-all" />
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-5">
+              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-600/30 group-hover:scale-110 transition-transform">
+                <Play size={24} fill="white" className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-white mb-0.5 group-hover:text-green-400 transition-colors">
+                  Watch Free Movies Now
+                </h2>
+                <p className="text-gray-400 text-xs">
+                  16+ public domain films you can watch instantly — no subscription, no ads. Classic horror, sci-fi, comedy & more.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-green-400 text-xs font-semibold group-hover:gap-3 transition-all">
+                <span>Watch Free</span>
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+        </Link>
+
         {/* Hero banner */}
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-gradient-to-r from-[#1a1a2e] via-[#16213e] to-[#0f3460] p-6 md:p-8">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl" />
