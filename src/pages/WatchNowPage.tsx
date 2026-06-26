@@ -62,12 +62,29 @@ export default function WatchNowPage() {
   const [showPlayer, setShowPlayer] = useState(false);
   const [recentSearches, setRecentSearches] = useState<{tmdbId: string; type: string; title: string}[]>([]);
 
+  // Auto-load player when TMDB ID is passed via URL
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('mc_recent_watch') || '[]');
       setRecentSearches(saved.slice(0, 5));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setTmdbId(id);
+      setType((searchParams.get('type') as 'movie' | 'tv') || 'movie');
+      if (searchParams.get('s')) setSeason(searchParams.get('s')!);
+      if (searchParams.get('e')) setEpisode(searchParams.get('e')!);
+      // Auto-play
+      setTimeout(() => {
+        const url = buildEmbedUrl(source, id, (searchParams.get('type') as 'movie' | 'tv') || 'movie', parseInt(searchParams.get('s') || '1'), parseInt(searchParams.get('e') || '1'));
+        setEmbedUrl(url);
+        setShowPlayer(true);
+      }, 300);
+    }
+  }, [searchParams]);
 
   const handleWatch = () => {
     if (!tmdbId) return;
