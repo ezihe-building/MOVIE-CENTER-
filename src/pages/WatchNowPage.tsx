@@ -387,22 +387,47 @@ export default function WatchNowPage() {
                 </div>
               )}
 
-              {/* Iframe */}
-              <iframe
-                src={embedUrl}
-                className="w-full h-full border-0"
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture; display-capture"
-                allowFullScreen
-                title="Video Player"
-                sandbox="allow-scripts allow-same-origin allow-presentation"
-                referrerPolicy="no-referrer"
-                loading="eager"
-                onLoad={() => setLoading(false)}
-                onError={() => {
-                  setLoading(false);
-                  setError('Failed to load player. Try another source.');
-                }}
-              />
+              {/* Redirecting sources: show "Open in new tab" instead of iframe */}
+              {source.redirects ? (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="text-center px-6">
+                    <div className="w-16 h-16 bg-[#222] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ExternalLink size={28} className="text-red-500" />
+                    </div>
+                    <p className="text-white font-bold text-sm mb-2">
+                      {source.label} opens in a new tab
+                    </p>
+                    <p className="text-gray-500 text-xs mb-4 max-w-xs">
+                      This platform blocks embedding. It will open directly in your browser.
+                    </p>
+                    <a
+                      href={embedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-all"
+                    >
+                      <Play size={18} fill="white" />
+                      Open {source.label}
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <iframe
+                  src={embedUrl}
+                  className="w-full h-full border-0"
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture; display-capture"
+                  allowFullScreen
+                  title="Video Player"
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                  onLoad={() => setLoading(false)}
+                  onError={() => {
+                    setLoading(false);
+                    setError('Failed to load player. Try another source.');
+                  }}
+                />
+              )}
 
               {/* Source badge */}
               <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg">
