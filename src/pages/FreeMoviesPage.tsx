@@ -1,358 +1,379 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Search, Star, X, Clock, Film, Volume2, VolumeX, Maximize, Loader2 } from 'lucide-react';
+import { ArrowLeft, Play, Search, Star, X, Clock, Film, Volume2, VolumeX, Maximize, RotateCw, AlertTriangle, ExternalLink, Cast, Grid3X3, Radio, Tv } from 'lucide-react';
 
-interface ArchiveMovie {
-  identifier: string;
-  title: string;
-  year?: string;
-  description?: string;
-  avg_rating?: number;
-  creator?: string;
-  subject?: string[];
-  runtime?: string;
+/* =========================================================
+   FREE MOVIES — Powered by CINEXORA
+   Embedded player matching Ezihe Movie Center design
+   ========================================================= */
+
+interface CineChannel {
+  id: string;
+  name: string;
+  category: string;
+  logo?: string;
+  hlsUrl?: string;
+  isMovie?: boolean;
 }
 
-const CATEGORIES = [
-  { key: 'classic', label: 'Classic Films', query: 'mediatype:movies+AND+year:[1920 TO 1960]+AND+format:mp4' },
-  { key: 'horror', label: 'Horror', query: 'mediatype:movies+AND+subject:horror+AND+format:mp4' },
-  { key: 'scifi', label: 'Sci-Fi', query: 'mediatype:movies+AND+subject:sci-fi+AND+format:mp4' },
-  { key: 'comedy', label: 'Comedy', query: 'mediatype:movies+AND+subject:comedy+AND+format:mp4' },
-  { key: 'drama', label: 'Drama', query: 'mediatype:movies+AND+subject:drama+AND+format:mp4' },
-  { key: 'documentary', label: 'Documentary', query: 'mediatype:movies+AND+subject:documentary+AND+format:mp4' },
-  { key: 'animation', label: 'Animation', query: 'mediatype:movies+AND+subject:animation+AND+format:mp4' },
+const CINE_CHANNELS: CineChannel[] = [
+  // Kids
+  { id: 'mrbean', name: 'Mr Bean', category: 'Kids', logo: 'https://i.ibb.co/cXxm04QL/images-1.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=mrbean' },
+  { id: 'nickelodeon', name: 'Nickelodeon', category: 'Kids', logo: 'https://i.ibb.co/HDfbKXt1/images.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=nickelodeon' },
+  { id: 'nickjr', name: 'Nick Jr.', category: 'Kids', logo: 'https://i.ibb.co/vxS9qr8f/images-4.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=nickjr' },
+  { id: 'teennick', name: 'TeenNick', category: 'Kids', logo: 'https://i.ibb.co/YF5vrZbb/images-1.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=teennick' },
+  { id: 'disneyjr', name: 'Disney', category: 'Kids', logo: 'https://i.ibb.co/S4LSM1VP/images-2.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=disneyjr' },
+  { id: 'peppa', name: 'Peppa Pig', category: 'Kids', logo: 'https://i.ibb.co/FLBxXrPc/images-3.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=peppa' },
+  { id: 'pokemon', name: 'Pokemon', category: 'Kids', logo: 'https://i.ibb.co/60P5WW3k/images-4.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=pokemon' },
+  { id: 'retrotoons', name: 'Retro Toons', category: 'Kids', logo: 'https://i.ibb.co/zWDNxNXy/Retro-Cartoons-Logo-2005-2015.webp', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=retrotoons' },
+  { id: 'kartoon', name: 'Kartoon Channel', category: 'Kids', logo: 'https://i.ibb.co/jkR1d33G/images-2.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=kartoon' },
+  { id: 'pbskids', name: 'PBS Kids', category: 'Kids', logo: 'https://i.ibb.co/dJQLnh0C/images-5.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=pbskids' },
+  // Entertainment
+  { id: 'nollyafrica', name: 'Nolly Africa', category: 'Entertainment', logo: 'https://i.ibb.co/6R5zZRbx/images.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=nollyafrica' },
+  { id: 'b4umovies', name: 'B4U Movies', category: 'Entertainment', logo: 'https://i.ibb.co/N2y9PfBK/images.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=b4umovies' },
+  { id: 'discovery', name: 'Discovery Turbo', category: 'Entertainment', logo: 'https://i.ibb.co/9H8gBpyn/images-8.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=discovery' },
+  // News
+  { id: 'aljazeera', name: 'Al Jazeera', category: 'News', logo: 'https://i.ibb.co/60bKqmkx/images-6.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=aljazeera' },
+  { id: 'foxnews', name: 'Fox News', category: 'News', logo: 'https://i.ibb.co/C3KNSsTH/Fox-News-Channel-logo-svg.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=foxnews' },
+  // Sports
+  { id: 'espn', name: 'ESPN', category: 'Sports', logo: 'https://i.ibb.co/gM5Qfcx3/images-7.png', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=espn' },
+  { id: 'beinxtra', name: 'beIN Sports', category: 'Sports', logo: 'https://i.ibb.co/bjyGC2zL/images-3.jpg', hlsUrl: 'https://cinexora.emmyhenztech.site/api/hls?ch=beinxtra' },
 ];
 
-const FEATURED_IDS = [
-  'night_of_the_living_dead',
-  'TheHouseOnHauntedHill',
-  'CarnivalOfSouls',
-  'TheHitchHicker',
-  'Plan_9_from_Outer_Space',
-  'the_last_man_on_earth',
-  'TheBrainThatWouldntDie',
-  'Dementia_13',
-  'TheLittleShopOfHorrors',
-  'SantaClausConquersTheMartians',
-  'TheAmazingTransparentMan',
-  'Creature_from_the_Haunted_Sea',
-  'TheGiantGilaMonster',
-  'TheKillerShrews',
-  'TeenagersFromOuterSpace',
-  'TheWaspWoman',
-];
+const CATEGORIES = ['All', ...Array.from(new Set(CINE_CHANNELS.map(c => c.category)))];
+const PALETTE = ['#E50914', '#e11d48', '#9333ea', '#0891b2', '#ea580c', '#16a34a', '#1D6CF5', '#f59e0b'];
 
-function getArchiveEmbedUrl(id: string) {
-  return `https://archive.org/embed/${id}?autoplay=0&autoPlay=0`;
+function getColor(name: string) {
+  const hash = [...name].reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0);
+  return PALETTE[Math.abs(hash) % PALETTE.length];
 }
-function getArchiveThumbnail(id: string) {
-  return `https://archive.org/services/img/${id}`;
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-async function fetchArchiveMovies(query: string, rows: number = 20): Promise<ArchiveMovie[]> {
-  const url = `https://archive.org/advancedsearch.php?q=${query}&fl[]=identifier,title,year,description,subject,avg_rating,creator,runtime&sort[]=avg_rating+desc&rows=${rows}&output=json`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.response?.docs || [];
-}
-
-async function fetchFeaturedMovies(): Promise<ArchiveMovie[]> {
-  const promises = FEATURED_IDS.map(async (id) => {
-    try {
-      const res = await fetch(`https://archive.org/advancedsearch.php?q=identifier:${id}&fl[]=identifier,title,year,description,subject,avg_rating,creator,runtime&rows=1&output=json`);
-      const data = await res.json();
-      return data.response?.docs?.[0] || null;
-    } catch { return null; }
+let hlsScriptLoaded = false;
+function loadHlsScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (hlsScriptLoaded) { resolve(); return; }
+    if ((window as any).Hls) { hlsScriptLoaded = true; resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+    script.onload = () => { hlsScriptLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('Failed to load HLS.js'));
+    document.head.appendChild(script);
   });
-  const results = await Promise.all(promises);
-  return results.filter(Boolean) as ArchiveMovie[];
-}
-
-function PlayerModal({ movie, onClose }: { movie: ArchiveMovie; onClose: () => void }) {
-  const [loading, setLoading] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-2 md:p-4 animate-fadeIn">
-      <button onClick={onClose} className="absolute top-3 right-3 z-20 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all hover:rotate-90">
-        <X size={24} />
-      </button>
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-3">
-        <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-          <Film size={20} className="text-white" />
-        </div>
-        <div>
-          <p className="text-white font-semibold text-sm line-clamp-1">{movie.title}</p>
-          <p className="text-gray-400 text-xs">{movie.year ? `${movie.year} · ` : ''}Public Domain</p>
-        </div>
-      </div>
-      <div className="w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative">
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-black">
-            <Loader2 size={40} className="text-red-500 animate-spin" />
-            <p className="text-gray-400 text-sm">Loading movie...</p>
-          </div>
-        )}
-        <iframe
-          ref={iframeRef}
-          src={getArchiveEmbedUrl(movie.identifier)}
-          className="w-full h-full border-0"
-          allow="autoplay; fullscreen"
-          title={movie.title}
-          onLoad={() => setLoading(false)}
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-        />
-      </div>
-    </div>
-  );
-}
-
-function MovieCard({ movie, index, onClick }: { movie: ArchiveMovie; index: number; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="group text-left rounded-xl overflow-hidden border border-[#1e1e1e] bg-[#111] hover:border-[#333] transition-all duration-300 hover:shadow-xl hover:shadow-black/30 hover:-translate-y-1 animate-fadeIn"
-      style={{ animationDelay: `${index * 50}ms` }}
-    >
-      <div className="relative aspect-[4/3] overflow-hidden">
-        <img
-          src={getArchiveThumbnail(movie.identifier)}
-          alt={movie.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300/1a1a1a/444444?text=No+Poster';
-          }}
-        />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-600/40">
-            <Play size={24} fill="white" className="text-white ml-1" />
-          </div>
-        </div>
-        <div className="absolute top-2 left-2 px-2 py-1 bg-green-500/90 text-white text-[9px] font-bold rounded uppercase tracking-wider">
-          Free
-        </div>
-        {movie.year && (
-          <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold rounded backdrop-blur-sm">
-            {movie.year}
-          </div>
-        )}
-      </div>
-      <div className="p-3">
-        <p className="text-white text-sm font-semibold line-clamp-1">{movie.title}</p>
-        {movie.creator && (
-          <p className="text-gray-500 text-[10px] mt-1 line-clamp-1">{movie.creator}</p>
-        )}
-        {movie.avg_rating && movie.avg_rating > 0 && (
-          <div className="flex items-center gap-1 mt-1.5">
-            <Star size={10} fill="#f5c518" className="text-[#f5c518]" />
-            <span className="text-[#f5c518] text-[10px] font-bold">{movie.avg_rating.toFixed(1)}</span>
-          </div>
-        )}
-      </div>
-    </button>
-  );
 }
 
 export default function FreeMoviesPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('classic');
-  const [movies, setMovies] = useState<ArchiveMovie[]>([]);
-  const [featured, setFeatured] = useState<ArchiveMovie[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<any>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [filter, setFilter] = useState('All');
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedMovie, setSelectedMovie] = useState<ArchiveMovie | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [portraitMode, setPortraitMode] = useState(false);
+  const [mode, setMode] = useState<'cinexora' | 'direct'>('cinexora');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ArchiveMovie[]>([]);
-  const [searching, setSearching] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const [feat, cats] = await Promise.all([
-        fetchFeaturedMovies(),
-        fetchArchiveMovies(CATEGORIES[0].query, 16),
-      ]);
-      setFeatured(feat);
-      setMovies(cats);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const ch = CINE_CHANNELS[activeIndex];
+  const filtered = CINE_CHANNELS.map((c, i) => ({ c, i })).filter(x => {
+    const matchCat = filter === 'All' || x.c.category === filter;
+    const matchSearch = !searchQuery || x.c.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+  const displayed = showAll ? filtered : filtered.slice(0, 10);
 
-  useEffect(() => {
-    const cat = CATEGORIES.find(c => c.key === activeTab);
-    if (!cat) return;
+  const playChannel = async (channel: CineChannel, index: number) => {
+    setActiveIndex(index);
     setLoading(true);
-    fetchArchiveMovies(cat.query, 16).then((data) => {
-      setMovies(data);
-      setLoading(false);
-    });
-  }, [activeTab]);
+    setError(null);
+    setPlaying(false);
+    setMode('direct');
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    const q = encodeURIComponent(`mediatype:movies+AND+title:${searchQuery.trim()}+AND+format:mp4`);
-    const data = await fetchArchiveMovies(q, 20);
-    setSearchResults(data);
-    setSearching(false);
+    const video = videoRef.current;
+    if (!video || !channel.hlsUrl) { setLoading(false); return; }
+
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    video.src = '';
+    video.load();
+
+    try {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = channel.hlsUrl;
+        video.load();
+        await video.play();
+        setPlaying(true);
+        setLoading(false);
+      } else {
+        await loadHlsScript();
+        const Hls = (window as any).Hls;
+        if (Hls && Hls.isSupported()) {
+          const hls = new Hls({
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            enableWorker: true,
+            lowLatencyMode: false,
+          });
+          hlsRef.current = hls;
+          hls.loadSource(channel.hlsUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().then(() => {
+              setPlaying(true);
+              setLoading(false);
+            }).catch(() => { setLoading(false); });
+          });
+          hls.on(Hls.Events.ERROR, (_: any, data: any) => {
+            if (data.fatal) {
+              setError(`Stream error. Try another channel.`);
+              setLoading(false);
+              hls.destroy();
+              hlsRef.current = null;
+            }
+          });
+        } else {
+          setError('HLS not supported. Try Safari.');
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      setError('Failed to load. Channel may be offline.');
+      setLoading(false);
+    }
   };
 
-  const displayed = searchQuery.trim() ? searchResults : movies;
-  const isSearch = searchQuery.trim().length > 0;
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setPlaying(true)).catch(() => {});
+    } else {
+      video.pause();
+      setPlaying(false);
+    }
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !muted;
+    setMuted(!muted);
+  };
+
+  const toggleFullscreen = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      video.requestFullscreen();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-20 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <button onClick={() => navigate(-1)} className="p-2.5 bg-[#111] border border-[#222] text-white rounded-full hover:bg-[#222] transition-all">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-              <Play size={24} className="text-green-500" fill="currentColor" /> Free Movies
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              <Film size={20} className="text-red-500" /> Free Movies
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Watch {FEATURED_IDS.length}+ public domain films directly — no subscription, no sign-up
-            </p>
+            <p className="text-gray-500 text-xs">{ch.name} — {ch.category}</p>
           </div>
+          <span className="ml-auto flex items-center gap-1.5 bg-[#E50914] text-white text-[10px] font-black tracking-wider px-3 py-1.5 rounded-full">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> FREE
+          </span>
         </div>
 
-        {/* Hero Banner */}
-        <div className="relative rounded-2xl overflow-hidden mb-8 bg-gradient-to-r from-[#1a2e1a] via-[#132e13] to-[#0f3d0f] p-6 md:p-8">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-green-600/10 rounded-full blur-3xl" />
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-            <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-600/30">
-              <Film size={28} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                Public Domain Films
-              </h2>
-              <p className="text-gray-400 text-sm max-w-xl">
-                Classic movies, cult horror, sci-fi, comedy — all legally free. 
-                Powered by <a href="https://archive.org" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300 transition-colors">Archive.org</a>.
-                Watch instantly, no account needed.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-green-400 font-semibold text-sm">
-              <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">100% Legal</span>
-              <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">No Ads</span>
-            </div>
-          </div>
+        {/* Player toggle */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setMode('cinexora')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              mode === 'cinexora' ? 'bg-[#E50914] text-white' : 'bg-[#111] border border-[#222] text-gray-400'
+            }`}
+          >
+            <Cast size={12} /> CINEXORA
+          </button>
+          <button
+            onClick={() => { setMode('direct'); playChannel(ch, activeIndex); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              mode === 'direct' ? 'bg-[#E50914] text-white' : 'bg-[#111] border border-[#222] text-gray-400'
+            }`}
+          >
+            <Play size={12} /> Direct
+          </button>
         </div>
 
-        {/* Search */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex items-center gap-2 bg-[#111] border border-[#222] rounded-xl px-4 py-3 focus-within:border-red-600/50 transition-all">
-            <Search size={18} className="text-gray-500" />
+        {/* Player */}
+        <div className={`relative bg-black rounded-2xl overflow-hidden border border-[#1e1e1e] shadow-2xl ${portraitMode ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'}`}>
+          {mode === 'cinexora' ? (
+            <>
+              <iframe
+                src="https://cinexora.emmyhenztech.site/livetv.html"
+                className="w-full h-full border-0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                title="CINEXORA Free Movies & TV"
+                loading="eager"
+              />
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
+                <span className="text-[10px] text-gray-500">Powered by</span>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
+              </div>
+            </>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                className="w-full h-full"
+                playsInline
+                muted={muted}
+                onClick={togglePlay}
+                poster={ch.logo}
+              />
+              {loading && (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-2 border-white/20 border-t-red-500 rounded-full animate-spin" />
+                    <p className="text-white text-xs font-semibold">Loading {ch.name}...</p>
+                  </div>
+                </div>
+              )}
+              {error && (
+                <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-10">
+                  <div className="text-center px-6">
+                    <AlertTriangle size={32} className="text-yellow-500 mx-auto mb-3" />
+                    <p className="text-white text-sm font-semibold mb-2">{error}</p>
+                    <button onClick={() => playChannel(ch, activeIndex)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all">
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                <button onClick={togglePlay} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                  {playing ? <Pause size={16} /> : <Play size={16} fill="white" />}
+                </button>
+                <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{ch.name}</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={toggleMute} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                    {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
+                  <button onClick={() => setPortraitMode(!portraitMode)} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all" title="Portrait">
+                    <RotateCw size={16} />
+                  </button>
+                  <button onClick={toggleFullscreen} className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-all">
+                    <Maximize size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
+                <span className="text-[10px] text-gray-500">Powered by</span>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Disclaimer */}
+        <div className="flex items-start gap-2 mt-3 bg-[#111] border border-[#222] rounded-xl px-4 py-3">
+          <AlertTriangle size={14} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+          <p className="text-gray-400 text-xs leading-relaxed">
+            Free content streams are provided by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors">CINEXORA</a>.
+            Availability depends on upstream sources.
+          </p>
+        </div>
+
+        {/* Search + Category */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+          <div className="flex items-center gap-2 bg-[#111] border border-[#222] rounded-xl px-4 py-2.5 flex-1">
+            <Search size={16} className="text-gray-500" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search free movies..."
+              onChange={(e) => { setSearchQuery(e.target.value); setShowAll(false); }}
+              placeholder="Search channels..."
               className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-gray-600"
             />
             {searchQuery && (
-              <button type="button" onClick={() => { setSearchQuery(''); setSearchResults([]); }} className="text-gray-500 hover:text-white">
-                <X size={16} />
+              <button onClick={() => setSearchQuery('')} className="text-gray-500 hover:text-white">
+                <X size={14} />
               </button>
             )}
-            <button type="submit" className="px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all">
-              {searching ? '...' : 'Search'}
-            </button>
           </div>
-        </form>
-
-        {/* Featured Section (only when not searching) */}
-        {!isSearch && featured.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Star size={18} className="text-[#f5c518]" />
-              <h2 className="text-lg font-bold text-white">Featured Free Movies</h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {featured.map((m, i) => (
-                <MovieCard key={m.identifier} movie={m} index={i} onClick={() => setSelectedMovie(m)} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Category Tabs */}
-        {!isSearch && (
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto hide-scrollbar pb-2">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
             {CATEGORIES.map(cat => (
               <button
-                key={cat.key}
-                onClick={() => setActiveTab(cat.key)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                  activeTab === cat.key ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-[#111] border border-[#222] text-gray-400 hover:text-white'
+                key={cat}
+                onClick={() => { setFilter(cat); setActiveIndex(0); setShowAll(false); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  filter === cat ? 'bg-[#E50914] text-white' : 'bg-[#111] border border-[#222] text-gray-400 hover:text-white'
                 }`}
               >
-                {cat.label}
+                {cat}
               </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {/* Search Results Title */}
-        {isSearch && (
-          <div className="flex items-center gap-2 mb-4">
-            <Search size={18} className="text-gray-500" />
-            <h2 className="text-lg font-bold text-white">
-              {searchResults.length > 0 ? `${searchResults.length} results` : 'No results'}
-            </h2>
-          </div>
-        )}
-
-        {/* Movies Grid */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="rounded-xl bg-[#111] border border-[#1e1e1e] overflow-hidden">
-                <div className="aspect-[4/3] skeleton" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 w-3/4 skeleton rounded" />
-                  <div className="h-2 w-1/2 skeleton rounded" />
+        {/* Channel grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mt-4">
+          {displayed.map(({ c, i }) => (
+            <button
+              key={c.id}
+              onClick={() => playChannel(c, i)}
+              className={`group text-left rounded-xl overflow-hidden border transition-all duration-200 ${
+                activeIndex === i ? 'border-[#E50914] ring-1 ring-[#E50914]' : 'border-[#1e1e1e] hover:border-[#333]'
+              }`}
+            >
+              <div className="relative aspect-[16/10] flex items-center justify-center overflow-hidden" style={{ background: c.logo ? '#000' : getColor(c.name) }}>
+                {c.logo ? (
+                  <img src={c.logo} alt={c.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : (
+                  <span className="text-white font-black text-lg">{getInitials(c.name)}</span>
+                )}
+                <span className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#e11d48] shadow-[0_0_8px_#e11d48] animate-pulse" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Play size={16} fill="white" className="text-white" />
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {displayed.map((m, i) => (
-              <MovieCard key={m.identifier} movie={m} index={i} onClick={() => setSelectedMovie(m)} />
-            ))}
+              <div className="p-2.5 bg-[#111]">
+                <p className="text-white text-xs font-semibold truncate">{c.name}</p>
+                <p className="text-gray-500 text-[10px] mt-0.5">{c.category}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {filtered.length > 10 && !showAll && (
+          <div className="text-center mt-4">
+            <button onClick={() => setShowAll(true)} className="px-5 py-2 bg-[#111] border border-[#222] text-gray-400 text-xs font-semibold rounded-full hover:text-white transition-all">
+              Show All {filtered.length} Channels
+            </button>
           </div>
         )}
 
-        {isSearch && searchResults.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <Film size={48} className="text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 text-sm">No free movies found for "{searchQuery}"</p>
-            <p className="text-gray-600 text-xs mt-1">Try different keywords or browse categories</p>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="mt-12 text-center border-t border-[#1e1e1e] pt-6">
+        {/* Footer credit */}
+        <div className="mt-10 text-center border-t border-[#1e1e1e] pt-6">
           <p className="text-gray-600 text-xs">
-            Free movies powered by <a href="https://archive.org" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400 font-semibold transition-colors">Internet Archive</a>
+            Free content powered by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 font-semibold transition-colors">CINEXORA</a>
           </p>
-          <p className="text-gray-700 text-[10px] mt-1">
-            All films are in the public domain or Creative Commons. No copyright infringement.
+          <p className="text-gray-700 text-[10px] mt-2">
+            All streams are free-to-air. Availability depends on upstream sources.
           </p>
         </div>
       </div>
-
-      {/* Player Modal */}
-      {selectedMovie && (
-        <PlayerModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
-      )}
     </div>
   );
 }
