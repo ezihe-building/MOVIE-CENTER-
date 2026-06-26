@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, ExternalLink, Star, Shield } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Play, ExternalLink, Star, Shield, ArrowRight } from 'lucide-react';
 
 interface Platform {
   name: string;
