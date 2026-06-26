@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Calendar, ArrowLeft, Globe, Users, Tv, Youtube, X, Play, Clapperboard, ExternalLink } from 'lucide-react';
 import {
   getTVShowDetails, getTVShowVideos, getTVShowCredits, getSimilarTVShows, getTVSeasonDetails,
@@ -180,9 +180,17 @@ export default function TVDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-8">
+              <Link
+                to={`/watch?id=${show.id}&type=tv`}
+                className="flex items-center gap-2 px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg shadow-red-600/30 text-sm md:text-base"
+              >
+                <Play size={20} fill="currentColor" />
+                Watch Now
+              </Link>
+
               {trailer ? (
                 <button onClick={handlePlayTrailer}
-                  className="flex items-center gap-2 px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg shadow-red-600/30 text-sm md:text-base">
+                  className="flex items-center gap-2 px-8 py-3.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 font-bold rounded-xl transition-all duration-300 text-sm md:text-base">
                   <Play size={20} fill="currentColor" />
                   Watch Trailer
                 </button>
