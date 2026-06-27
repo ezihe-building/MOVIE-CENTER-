@@ -217,7 +217,7 @@ export default function MovieDetailPage() {
               )}
 
               <Link
-                to={`/watch?id=${movie.id}&type=movie`}
+                to="/watch"
                 className="flex items-center gap-2 px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg shadow-red-600/30 text-sm md:text-base"
               >
                 <Play size={20} fill="currentColor" />
