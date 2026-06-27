@@ -10,8 +10,6 @@ import MovieDetailPage from './pages/MovieDetailPage';
 import TVShowsPage from './pages/TVShowsPage';
 import TVDetailPage from './pages/TVDetailPage';
 import LiveTVPage from './pages/LiveTVPage';
-import StreamingHubPage from './pages/StreamingHubPage';
-import FreeMoviesPage from './pages/FreeMoviesPage';
 import WatchNowPage from './pages/WatchNowPage';
 
 export default function App() {
@@ -30,8 +28,6 @@ export default function App() {
             <Route path="/movie/:id" element={<MovieDetailPage />} />
             <Route path="/tv/:id" element={<TVDetailPage />} />
             <Route path="/live" element={<LiveTVPage />} />
-            <Route path="/stream" element={<StreamingHubPage />} />
-            <Route path="/free-movies" element={<FreeMoviesPage />} />
             <Route path="/watch" element={<WatchNowPage />} />
           </Routes>
         </main>
