@@ -20,7 +20,7 @@ export default function FreeMoviesPage() {
           </h1>
         </div>
         <a
-          href="https://cinexora.emmyhenztech.site"
+          href="https://cinexora.emmyhenztech.site/home.html"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-gray-500 hover:text-red-400 text-[10px] transition-colors"
@@ -29,14 +29,14 @@ export default function FreeMoviesPage() {
         </a>
       </div>
 
-      {/* Full-viewport CINEXORA iframe — root URL for movies/TV shows */}
+      {/* Full-viewport CINEXORA iframe — home.html for movies & TV shows */}
       <div className="px-1 sm:px-2 mt-1">
         <div
           className="relative w-full bg-black rounded-lg overflow-hidden border border-[#1a1a1a]"
           style={{ height: 'calc(100vh - 95px)', minHeight: '300px' }}
         >
           <iframe
-            src="https://cinexora.emmyhenztech.site"
+            src="https://cinexora.emmyhenztech.site/home.html"
             className="w-full h-full border-0"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
