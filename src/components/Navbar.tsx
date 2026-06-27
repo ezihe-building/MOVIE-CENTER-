@@ -34,10 +34,8 @@ export default function Navbar() {
     { to: '/', label: 'Home', icon: <Home size={18} /> },
     { to: '/movies', label: 'Movies', icon: <Clapperboard size={18} /> },
     { to: '/tv', label: 'TV Series', icon: <Tv size={18} /> },
-    { to: '/live', label: 'Live TV', icon: <Radio size={18} /> },
-    { to: '/stream', label: 'Stream Hub', icon: <Play size={18} /> },
-    { to: '/free-movies', label: 'Free Movies', icon: <Sparkles size={18} /> },
     { to: '/watch', label: 'Watch Now', icon: <MonitorPlay size={18} /> },
+    { to: '/live', label: 'Live TV', icon: <Radio size={18} /> },
     { to: '/trending', label: 'Trending', icon: <TrendingUp size={18} /> },
     { to: '/categories', label: 'Categories', icon: <Grid3X3 size={18} /> },
   ];
