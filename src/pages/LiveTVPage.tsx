@@ -31,7 +31,7 @@ const CHANNELS: Channel[] = [
 ];
 
 const CATEGORIES = ['All', ...Array.from(new Set(CHANNELS.map(c => c.category)))];
-const PALETTE = ['#E50914', '#e11d48', '#9333ea', '#0891b2', '#ea580c', '#16a34a', '#1D6CF5', '#f59e0b'];
+const PALETTE = ['#E50914', '#e11d48', '#9333ea', '#0891b2', '#ea580c', '#16a34a', '#dc2626', '#f59e0b'];
 
 function getColor(name: string) {
   const hash = [...name].reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0);
@@ -189,7 +189,7 @@ export default function LiveTVPage() {
           <button
             onClick={() => setMode('cinexora')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-              mode === 'cinexora' ? 'bg-[#1D6CF5] text-white' : 'bg-[#111] border border-[#222] text-gray-400'
+              mode === 'cinexora' ? 'bg-red-600 text-white' : 'bg-[#111] border border-[#222] text-gray-400'
             }`}
           >
             <Cast size={12} /> CINEXORA Player
@@ -220,7 +220,7 @@ export default function LiveTVPage() {
               {/* CINEXORA credit */}
               <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
                 <span className="text-[10px] text-gray-500">Powered by</span>
-                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-red-400 hover:text-red-300 font-semibold">CINEXORA</a>
               </div>
             </>
           ) : (
@@ -277,7 +277,7 @@ export default function LiveTVPage() {
               {/* CINEXORA credit */}
               <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-3 py-1.5 bg-gradient-to-b from-black/60 to-transparent">
                 <span className="text-[10px] text-gray-500">Powered by</span>
-                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">CINEXORA</a>
+                <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-[10px] text-red-400 hover:text-red-300 font-semibold">CINEXORA</a>
               </div>
             </>
           )}
@@ -287,7 +287,7 @@ export default function LiveTVPage() {
         <div className="flex items-start gap-2 mt-3 bg-[#111] border border-[#222] rounded-xl px-4 py-3">
           <AlertTriangle size={14} className="text-yellow-500 mt-0.5 flex-shrink-0" />
           <p className="text-gray-400 text-xs leading-relaxed">
-            Live TV streams are provided by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors">CINEXORA</a>.
+            Live TV streams are provided by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 transition-colors">CINEXORA</a>.
             Channel availability depends on upstream sources.
             {mode === 'cinexora' ? ' Use the CINEXORA player above to select channels.' : ' Tap a channel below to switch.'}
           </p>
@@ -300,7 +300,7 @@ export default function LiveTVPage() {
               key={cat}
               onClick={() => { setFilter(cat); setActiveIndex(0); setShowAll(false); }}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                filter === cat ? 'bg-[#1D6CF5] text-white' : 'bg-[#111] border border-[#222] text-gray-400 hover:text-white'
+                filter === cat ? 'bg-red-600 text-white' : 'bg-[#111] border border-[#222] text-gray-400 hover:text-white'
               }`}
             >
               {cat}
@@ -350,7 +350,7 @@ export default function LiveTVPage() {
         {/* Footer credit */}
         <div className="mt-10 text-center border-t border-[#1e1e1e] pt-6">
           <p className="text-gray-600 text-xs">
-            Live TV streams powered by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 font-semibold transition-colors">CINEXORA</a>
+            Live TV streams powered by <a href="https://cinexora.emmyhenztech.site" target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-400 font-semibold transition-colors">CINEXORA</a>
           </p>
           <p className="text-gray-700 text-[10px] mt-2">
             Free-to-air channels only. Channel availability depends on upstream sources.
