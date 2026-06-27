@@ -29,20 +29,21 @@ export default function FreeMoviesPage() {
         </a>
       </div>
 
-      {/* Full-viewport CINEXORA iframe */}
+      {/* Full-viewport CINEXORA iframe — root URL for movies/TV shows */}
       <div className="px-1 sm:px-2 mt-1">
         <div
           className="relative w-full bg-black rounded-lg overflow-hidden border border-[#1a1a1a]"
           style={{ height: 'calc(100vh - 95px)', minHeight: '300px' }}
         >
           <iframe
-            src="https://cinexora.emmyhenztech.site/livetv.html"
+            src="https://cinexora.emmyhenztech.site"
             className="w-full h-full border-0"
-            allow="autoplay; fullscreen; picture-in-picture; microphone; camera"
+            allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
             title="Free Movies & TV Shows"
             loading="eager"
             importance="high"
+            referrerPolicy="no-referrer"
           />
         </div>
       </div>
