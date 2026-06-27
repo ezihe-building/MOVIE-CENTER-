@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Play, MonitorPlay, Search, X, Star, Clock,
+  ArrowLeft, Play, MonitorPlay, Search, X, Star,
   Calendar, Film, Tv, Sparkles, TrendingUp, RotateCw,
-  ExternalLink, AlertTriangle, ChevronLeft, ChevronRight
+  ExternalLink, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { getTrending, getPopular, getTopRated, searchMovies, getImageUrl, getBackdropUrl, Movie } from '../services/tmdb';
+import { getTrending, getPopular, searchMovies, getImageUrl, getBackdropUrl, Movie } from '../services/tmdb';
 
 /* =========================================================
    WATCH NOW — MovieBox-style streaming hub
@@ -90,20 +90,16 @@ export default function WatchNowPage() {
       let data: Movie[] = [];
       switch (activeTab) {
         case 'trending':
-          data = await getTrending();
+          data = (await getTrending()).results;
           break;
         case 'movies':
-          data = await getPopular();
+          data = (await getPopular()).results;
           break;
         case 'tv':
-          // For TV shows, we fetch trending and filter or get popular TV
-          const trending = await getTrending();
-          data = trending.slice(0, 20);
+          data = (await getTrending()).results.slice(0, 20);
           break;
         case 'anime':
-          // Search for anime-related content
-          const search = await searchMovies('anime');
-          data = search.slice(0, 20);
+          data = (await searchMovies('anime')).results.slice(0, 20);
           break;
       }
       setMovies(data);
@@ -125,7 +121,7 @@ export default function WatchNowPage() {
     setLoading(true);
     try {
       const results = await searchMovies(searchQuery);
-      setMovies(results);
+      setMovies(results.results);
     } catch {
       setMovies([]);
     } finally {
