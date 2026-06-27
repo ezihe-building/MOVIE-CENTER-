@@ -7,6 +7,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- SPA fallback: redirect direct path access to hash-based routing -->
+    <script type="text/javascript">
+      (function() {
+        var l = window.location;
+        // If accessing a sub-path directly (not root, not a file), redirect to hash route
+        if (l.pathname !== '/' && !l.pathname.match(/\.(js|css|png|jpg|jpeg|webp|svg|ico|json|html|txt)$/)) {
+          var redirect = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/#' + l.pathname + l.search + l.hash;
+          window.location.replace(redirect);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
